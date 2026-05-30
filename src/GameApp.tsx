@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { HIT_RANGE, type GameAppState, type Position } from './types';
 import { usePlayerMovement } from './userPlayerMovements';
 import { GameUI } from './GameUI';
+import { Target } from './Target';
 
 // 【修正点1】固定の座標データはコンポーネントの「外」に出す
 // これにより、再レンダリング時にオブジェクトが再生成されず、無限ループを防ぎます。
@@ -10,36 +10,26 @@ const ADVANCE_ITEM_POS: Position = { x: 500, y: 400 };
 
 export const GameApp: React.FC = () => {
   const [gameState, setGameState] = useState<GameAppState>({
-    hp: 100,
+    hp: "心心心心心", // プレイヤーのHP：変更必須
     inventory: [],
     canAdvance: false,
     isShinEventTriggered: false,
   });
+  const [hasChanged, setHasChanged] = useState(false); // 状態の変更を追跡するフラグ
 
   const handleMove = (nextPos: Position) => {
     setGameState(prev => {
       const nextState = { ...prev };
-      let hasChanged = false;
+      setHasChanged(false); // 毎回リセット
+
+      // 当たり判定をまとめて委譲する
+      
 
       // 1. シンとの当たり判定
-      const distanceToShin = Math.hypot(nextPos.x - SHIN_POS.x, nextPos.y - SHIN_POS.y);
-      if (distanceToShin < HIT_RANGE && !prev.isShinEventTriggered) {
-        nextState.hp -= 10;
-        nextState.isShinEventTriggered = true;
-        hasChanged = true;
-        
-        // 【修正点3】Reactのレンダリング処理をブロックしないよう、alertを非同期（setTimeout）にする
-        setTimeout(() => alert("シンに遭遇した！何か言葉を感じる..."), 10);
-      }
+      Target(nextPos,setHasChanged);
 
-      // 2. 「進」アイテムとの当たり判定
-      const distanceToAdvance = Math.hypot(nextPos.x - ADVANCE_ITEM_POS.x, nextPos.y - ADVANCE_ITEM_POS.y);
-      if (distanceToAdvance < HIT_RANGE && !prev.canAdvance && !prev.inventory.includes('進')) {
-        nextState.inventory = [...prev.inventory, '進'];
-        nextState.canAdvance = true;
-        hasChanged = true;
-      }
 
+      
       // 変更があった場合のみ新しい状態を返し、なければそのまま（再レンダリングしない）
       return hasChanged ? nextState : prev;
     });
@@ -49,9 +39,10 @@ export const GameApp: React.FC = () => {
 
   const handleMapAdvance = (willAdvance: boolean) => {
     if (willAdvance) {
-      setTimeout(() => alert("次のマップへ移動します..."), 10);
+      setTimeout(() => alert("次のマップへ移動します..."), 1000);
       setGameState(prev => ({ ...prev, canAdvance: false, inventory: [] }));
     } else {
+      setTimeout(() => alert("次のマップへ移動します..."), 1000);
       setGameState(prev => ({ ...prev, canAdvance: false }));
     }
   };
@@ -65,12 +56,19 @@ export const GameApp: React.FC = () => {
         width: '40px', height: '40px', backgroundColor: 'blue', borderRadius: '50%'
       }}></div>
 
-      {/* シンの描画 */}
+      {/* 真の描画 */}
       <div style={{
         position: 'absolute', top: SHIN_POS.y, left: SHIN_POS.x,
         width: '50px', height: '50px', backgroundColor: 'black', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
       }}>
-        シン
+        真
+      </div>
+
+      <div style={{
+        position: 'absolute', top: SHIN_POS.y, left: SHIN_POS.x,
+        width: '50px', height: '50px', backgroundColor: 'black', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center'
+      }}>
+        芯
       </div>
 
       {/* 「進」アイテムの描画（取得していない場合のみ表示） */}

@@ -16,7 +16,7 @@ export interface GameState {
 }
 
 export interface GameAppState {
-  hp: number;
+  hp: string; 
   inventory: string[];
   canAdvance: boolean;
   isShinEventTriggered: boolean;
