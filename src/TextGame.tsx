@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MAP_WIDTH, MAP_HEIGHT, type GameState } from './types';
-import { MAPS, DICTIONARY } from './constants';
+import { MAPS, SHIN_DICTIONARY, GIN_DICTIONARY } from './constants';
 
 const SAVE_KEY = 'text_game_save';
 
@@ -50,12 +50,17 @@ export const TextGame: React.FC = () => {
       }
 
       // イベント発火
+      const shinMeaning = SHIN_DICTIONARY[targetTile.char];
+      const jinMeaning = GIN_DICTIONARY[targetTile.char];
       if (targetTile.event === 'shin') {
-        setMessage(`シンに触れた: ${DICTIONARY[targetTile.char] || '???'}`);
-        nextFlags.hasDiscoveredShin = true; // 真を発見したフラグをセット
-        nextHp.substring(0, nextHp.length - 1);
+        setMessage(`シンに触れた: ${shinMeaning || '???'}`);
+        nextFlags.hasDiscoveredShin = true; // シンを発見したフラグをセット
+      } else if (targetTile.event === 'gin') {
+        setMessage(`ジンに触れた: ${jinMeaning || '???'}`);
+        nextFlags.hasDiscoveredJin = true; // ジンを発見したフラグをセット
+        nextHp = nextHp.substring(0, nextHp.length - 1);
       } else if (targetTile.event === 'item') {
-        if (!nextInventory.includes(targetTile.label)) {
+        if (targetTile.label && !nextInventory.includes(targetTile.label)) {
           nextInventory.push(targetTile.label!);
           setMessage(`${targetTile.label} を手に入れた。`);
           nextHp += "心";
@@ -63,6 +68,9 @@ export const TextGame: React.FC = () => {
       } else if (targetTile.event === 'advance') {
         setShowAdvanceDialog(true); // ダイアログ表示
         return { ...prev, playerPos: { x: nextX, y: nextY } };
+      }
+      if (!targetTile.event && (shinMeaning || jinMeaning)) {
+        setMessage(`${targetTile.char} の意味: ${shinMeaning || jinMeaning}`);
       }
 
       return {
@@ -98,8 +106,7 @@ export const TextGame: React.FC = () => {
       ...prev,
       currentMapIndex: nextIndex,
       playerPos: { x: 16, y: 16 }, // リセット位置
-      discoveredChars: [], // 新マップで文字をリセット
-      flags: {} // 新マップでフラグもリセット
+      discoveredChars: [] // 新マップで文字をリセット
     }));
     setShowAdvanceDialog(false);
     setMessage(`第 ${nextIndex + 1} 領域に転送された。`);
@@ -132,12 +139,11 @@ export const TextGame: React.FC = () => {
       }}>
         {MAPS[state.currentMapIndex].map((row, y) => 
           row.map((tile, x) => {
-            // 条件フラグのチェック：このタイルを表示できるかどうか
-            const canDisplay = !tile.requiresFlag || state.flags[tile.requiresFlag];
             // 文字が発見済みか判定
             const isDiscovered = state.discoveredChars.includes(tile.char);
-            // 表示する文字を決定
-            const displayChar = !canDisplay ? '' : (isDiscovered ? tile.char : (tile.event ? '？' : tile.char));
+            // 表示する文字を決定：発見済みなら本物、未発見で事象あり（シン、アイテム）なら「？」
+            const isDictionaryTile = !!(SHIN_DICTIONARY[tile.char] || GIN_DICTIONARY[tile.char]);
+            const displayChar = isDiscovered || !isDictionaryTile ? tile.char : '？';
             
             return (
               <div key={`${x}-${y}`} style={{ 
