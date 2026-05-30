@@ -14,7 +14,8 @@ export const TextGame: React.FC = () => {
       inventory: [],
       currentMapIndex: 0,
       playerPos: { x: 16, y: 16 }, // 下から上へ進むため、初期位置は下の方
-      flags: {}
+      flags: {},
+      discoveredChars: []
     };
   });
 
@@ -41,10 +42,17 @@ export const TextGame: React.FC = () => {
       let nextHp = prev.hp; // HPの変化：要修正
       const nextInventory = [...prev.inventory];
       const nextFlags = { ...prev.flags };
+      const nextDiscoveredChars = [...prev.discoveredChars];
+
+      // 当たり判定時に文字を発見状態にする
+      if (targetTile.char && !nextDiscoveredChars.includes(targetTile.char)) {
+        nextDiscoveredChars.push(targetTile.char);
+      }
 
       // イベント発火
       if (targetTile.event === 'shin') {
-        setMessage(`シンに触れた: ${DICTIONARY[targetTile.char]}`);
+        setMessage(`シンに触れた: ${DICTIONARY[targetTile.char] || '???'}`);
+        nextFlags.hasDiscoveredShin = true; // 真を発見したフラグをセット
         nextHp.substring(0, nextHp.length - 1);
       } else if (targetTile.event === 'item') {
         if (!nextInventory.includes(targetTile.label)) {
@@ -62,7 +70,8 @@ export const TextGame: React.FC = () => {
         playerPos: { x: nextX, y: nextY },
         hp: nextHp,
         inventory: nextInventory,
-        flags: nextFlags
+        flags: nextFlags,
+        discoveredChars: nextDiscoveredChars
       };
     });
   }, []);
@@ -89,7 +98,8 @@ export const TextGame: React.FC = () => {
       ...prev,
       currentMapIndex: nextIndex,
       playerPos: { x: 16, y: 16 }, // リセット位置
-      canAdvance: false
+      discoveredChars: [], // 新マップで文字をリセット
+      flags: {} // 新マップでフラグもリセット
     }));
     setShowAdvanceDialog(false);
     setMessage(`第 ${nextIndex + 1} 領域に転送された。`);
@@ -121,15 +131,25 @@ export const TextGame: React.FC = () => {
         border: '1px solid #333'
       }}>
         {MAPS[state.currentMapIndex].map((row, y) => 
-          row.map((tile, x) => (
-            <div key={`${x}-${y}`} style={{ 
-              width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px',
-              color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff'
-            }}>
-              {x === state.playerPos.x && y === state.playerPos.y ? '人' : tile.char} 
-            </div>
-          ))
+          row.map((tile, x) => {
+            // 条件フラグのチェック：このタイルを表示できるかどうか
+            const canDisplay = !tile.requiresFlag || state.flags[tile.requiresFlag];
+            // 文字が発見済みか判定
+            const isDiscovered = state.discoveredChars.includes(tile.char);
+            // 表示する文字を決定
+            const displayChar = !canDisplay ? '' : (isDiscovered ? tile.char : (tile.event ? '？' : tile.char));
+            
+            return (
+              <div key={`${x}-${y}`} style={{ 
+                width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '14px',
+                color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff',
+                opacity: isDiscovered && tile.event ? 1 : 0.7
+              }}>
+                {x === state.playerPos.x && y === state.playerPos.y ? '人' : displayChar} 
+              </div>
+            );
+          })
         )}
       </div>
 

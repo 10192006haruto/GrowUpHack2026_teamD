@@ -5,6 +5,7 @@ export interface TileData {
   isWall: boolean;
   event?: 'shin' | 'advance' | 'item';
   label?: string;
+  requiresFlag?: string; // このタイルを表示するのに必要なフラグ
 }
 
 export interface GameState {
@@ -13,6 +14,7 @@ export interface GameState {
   currentMapIndex: number;
   playerPos: Position;
   flags: { [key: string]: boolean };
+  discoveredChars: string[];
 }
 
 export interface GameAppState {
@@ -20,6 +22,7 @@ export interface GameAppState {
   inventory: string[];
   canAdvance: boolean;
   isShinEventTriggered: boolean;
+  discoveredChars: string[];
 }
 
 export const MAP_WIDTH = 32; // 16:9の比率を考慮
