@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MAP_WIDTH, MAP_HEIGHT, type GameState } from './types';
-import { MAPS, DICTIONARY } from './constants';
+import { MAPS, SHIN_DICTIONARY, GIN_DICTIONARY } from './constants';
 
 const SAVE_KEY = 'text_game_save';
 
@@ -14,7 +14,8 @@ export const TextGame: React.FC = () => {
       inventory: [],
       currentMapIndex: 0,
       playerPos: { x: 16, y: 16 }, // 下から上へ進むため、初期位置は下の方
-      flags: {}
+      flags: {},
+      discoveredChars: []
     };
   });
 
@@ -41,13 +42,25 @@ export const TextGame: React.FC = () => {
       let nextHp = prev.hp; // HPの変化：要修正
       const nextInventory = [...prev.inventory];
       const nextFlags = { ...prev.flags };
+      const nextDiscoveredChars = [...prev.discoveredChars];
+
+      // 当たり判定時に文字を発見状態にする
+      if (targetTile.char && !nextDiscoveredChars.includes(targetTile.char)) {
+        nextDiscoveredChars.push(targetTile.char);
+      }
 
       // イベント発火
+      const shinMeaning = SHIN_DICTIONARY[targetTile.char];
+      const jinMeaning = GIN_DICTIONARY[targetTile.char];
       if (targetTile.event === 'shin') {
-        setMessage(`シンに触れた: ${DICTIONARY[targetTile.char]}`);
-        nextHp.substring(0, nextHp.length - 1);
+        setMessage(`シンに触れた: ${shinMeaning || '???'}`);
+        nextFlags.hasDiscoveredShin = true; // シンを発見したフラグをセット
+      } else if (targetTile.event === 'gin') {
+        setMessage(`ジンに触れた: ${jinMeaning || '???'}`);
+        nextFlags.hasDiscoveredJin = true; // ジンを発見したフラグをセット
+        nextHp = nextHp.substring(0, nextHp.length - 1);
       } else if (targetTile.event === 'item') {
-        if (!nextInventory.includes(targetTile.label)) {
+        if (targetTile.label && !nextInventory.includes(targetTile.label)) {
           nextInventory.push(targetTile.label!);
           setMessage(`${targetTile.label} を手に入れた。`);
           nextHp += "心";
@@ -56,13 +69,17 @@ export const TextGame: React.FC = () => {
         setShowAdvanceDialog(true); // ダイアログ表示
         return { ...prev, playerPos: { x: nextX, y: nextY } };
       }
+      if (!targetTile.event && (shinMeaning || jinMeaning)) {
+        setMessage(`${targetTile.char} の意味: ${shinMeaning || jinMeaning}`);
+      }
 
       return {
         ...prev,
         playerPos: { x: nextX, y: nextY },
         hp: nextHp,
         inventory: nextInventory,
-        flags: nextFlags
+        flags: nextFlags,
+        discoveredChars: nextDiscoveredChars
       };
     });
   }, []);
@@ -89,7 +106,7 @@ export const TextGame: React.FC = () => {
       ...prev,
       currentMapIndex: nextIndex,
       playerPos: { x: 16, y: 16 }, // リセット位置
-      canAdvance: false
+      discoveredChars: [] // 新マップで文字をリセット
     }));
     setShowAdvanceDialog(false);
     setMessage(`第 ${nextIndex + 1} 領域に転送された。`);
@@ -121,15 +138,24 @@ export const TextGame: React.FC = () => {
         border: '1px solid #333'
       }}>
         {MAPS[state.currentMapIndex].map((row, y) => 
-          row.map((tile, x) => (
-            <div key={`${x}-${y}`} style={{ 
-              width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px',
-              color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff'
-            }}>
-              {x === state.playerPos.x && y === state.playerPos.y ? '人' : tile.char} 
-            </div>
-          ))
+          row.map((tile, x) => {
+            // 文字が発見済みか判定
+            const isDiscovered = state.discoveredChars.includes(tile.char);
+            // 表示する文字を決定：発見済みなら本物、未発見で事象あり（シン、アイテム）なら「？」
+            const isDictionaryTile = !!(SHIN_DICTIONARY[tile.char] || GIN_DICTIONARY[tile.char]);
+            const displayChar = isDiscovered || !isDictionaryTile ? tile.char : '？';
+            
+            return (
+              <div key={`${x}-${y}`} style={{ 
+                width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '14px',
+                color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff',
+                opacity: isDiscovered && tile.event ? 1 : 0.7
+              }}>
+                {x === state.playerPos.x && y === state.playerPos.y ? '人' : displayChar} 
+              </div>
+            );
+          })
         )}
       </div>
 
