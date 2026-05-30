@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { MAP_WIDTH, MAP_HEIGHT, type GameState } from './types';
-import { MAPS, DICTIONARY } from './constants';
+import { MAPS, SHIN_DICTIONARY, GIN_DICTIONARY } from './constants';
 
 const SAVE_KEY = 'text_game_save';
 
@@ -10,11 +10,12 @@ export const TextGame: React.FC = () => {
     const saved = localStorage.getItem(SAVE_KEY);
     if (saved) return JSON.parse(saved);
     return {
-      hp: 100,
+      hp: "心心心心心",
       inventory: [],
       currentMapIndex: 0,
       playerPos: { x: 16, y: 16 }, // 下から上へ進むため、初期位置は下の方
-      flags: {}
+      flags: {},
+      discoveredChars: []
     };
   });
 
@@ -38,23 +39,38 @@ export const TextGame: React.FC = () => {
       const targetTile = currentMap[nextY][nextX];
       if (targetTile.isWall) return prev;
 
-      let nextHp = prev.hp;
+      let nextHp = prev.hp; // HPの変化：要修正
       const nextInventory = [...prev.inventory];
       const nextFlags = { ...prev.flags };
+      const nextDiscoveredChars = [...prev.discoveredChars];
+
+      // 当たり判定時に文字を発見状態にする
+      if (targetTile.char && !nextDiscoveredChars.includes(targetTile.char)) {
+        nextDiscoveredChars.push(targetTile.char);
+      }
 
       // イベント発火
+      const shinMeaning = SHIN_DICTIONARY[targetTile.char];
+      const jinMeaning = GIN_DICTIONARY[targetTile.char];
       if (targetTile.event === 'shin') {
-        setMessage(`シンに触れた: ${DICTIONARY['シン']}`);
-        nextHp -= 5;
+        setMessage(`シンに触れた: ${shinMeaning || '???'}`);
+        nextFlags.hasDiscoveredShin = true; // シンを発見したフラグをセット
+      } else if (targetTile.event === 'gin') {
+        setMessage(`ジンに触れた: ${jinMeaning || '???'}`);
+        nextFlags.hasDiscoveredJin = true; // ジンを発見したフラグをセット
+        nextHp = nextHp.substring(0, nextHp.length - 1);
       } else if (targetTile.event === 'item') {
-        if (!nextInventory.includes(targetTile.label!)) {
+        if (targetTile.label && !nextInventory.includes(targetTile.label)) {
           nextInventory.push(targetTile.label!);
           setMessage(`${targetTile.label} を手に入れた。`);
-          nextHp = Math.min(nextHp + 20, 100);
+          nextHp += "心";
         }
       } else if (targetTile.event === 'advance') {
         setShowAdvanceDialog(true); // ダイアログ表示
         return { ...prev, playerPos: { x: nextX, y: nextY } };
+      }
+      if (!targetTile.event && (shinMeaning || jinMeaning)) {
+        setMessage(`${targetTile.char} の意味: ${shinMeaning || jinMeaning}`);
       }
 
       return {
@@ -62,7 +78,8 @@ export const TextGame: React.FC = () => {
         playerPos: { x: nextX, y: nextY },
         hp: nextHp,
         inventory: nextInventory,
-        flags: nextFlags
+        flags: nextFlags,
+        discoveredChars: nextDiscoveredChars
       };
     });
   }, []);
@@ -89,7 +106,7 @@ export const TextGame: React.FC = () => {
       ...prev,
       currentMapIndex: nextIndex,
       playerPos: { x: 16, y: 16 }, // リセット位置
-      canAdvance: false
+      discoveredChars: [] // 新マップで文字をリセット
     }));
     setShowAdvanceDialog(false);
     setMessage(`第 ${nextIndex + 1} 領域に転送された。`);
@@ -103,8 +120,8 @@ export const TextGame: React.FC = () => {
     }}>
       {/* UI：左上の心のHP */}
       <div style={{ position: 'absolute', top: 20, left: 20, borderLeft: '4px solid #f00', paddingLeft: 10 }}>
-        <div style={{ fontSize: '12px', color: '#888' }}>HEART HP</div>
-        <div style={{ fontSize: '24px' }}>{state.hp}%</div>
+        <div style={{ fontSize: '12px', color: '#888' }}>心残心</div>
+        <div style={{ fontSize: '24px' }}>{state.hp}</div>
       </div>
 
       {/* UI：右上のインベントリ */}
@@ -121,15 +138,24 @@ export const TextGame: React.FC = () => {
         border: '1px solid #333'
       }}>
         {MAPS[state.currentMapIndex].map((row, y) => 
-          row.map((tile, x) => (
-            <div key={`${x}-${y}`} style={{ 
-              width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '14px',
-              color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff'
-            }}>
-              {x === state.playerPos.x && y === state.playerPos.y ? '我' : tile.char}
-            </div>
-          ))
+          row.map((tile, x) => {
+            // 文字が発見済みか判定
+            const isDiscovered = state.discoveredChars.includes(tile.char);
+            // 表示する文字を決定：発見済みなら本物、未発見で事象あり（シン、アイテム）なら「？」
+            const isDictionaryTile = !!(SHIN_DICTIONARY[tile.char] || GIN_DICTIONARY[tile.char]);
+            const displayChar = isDiscovered || !isDictionaryTile ? tile.char : '？';
+            
+            return (
+              <div key={`${x}-${y}`} style={{ 
+                width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '14px',
+                color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff',
+                opacity: isDiscovered && tile.event ? 1 : 0.7
+              }}>
+                {x === state.playerPos.x && y === state.playerPos.y ? '人' : displayChar} 
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -144,7 +170,7 @@ export const TextGame: React.FC = () => {
           position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
           backgroundColor: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          <div style={{ border: '1px solid #fff', padding: 40, textAlign: 'center' }}>
+          <div style={{ border: '1px solid #040303', padding: 40, textAlign: 'center' }}>
             <p>「進」の意志を感じる。次の領域へ向かいますか？</p>
             <button onClick={advanceToNextMap} style={{ background: '#fff', color: '#000', border: 'none', padding: '10px 20px', cursor: 'pointer', marginRight: 10 }}>はい</button>
             <button onClick={() => setShowAdvanceDialog(false)} style={{ background: '#333', color: '#fff', border: 'none', padding: '10px 20px', cursor: 'pointer' }}>いいえ</button>
