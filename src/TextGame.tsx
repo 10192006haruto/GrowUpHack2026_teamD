@@ -160,7 +160,6 @@ export const TextGame: React.FC = () => {
               }
             }
             // --- ★ここまで追加 ---
-
             return (
               <div key={`${x}-${y}`} style={{ 
                 width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
