@@ -22,6 +22,21 @@ export const TextGame: React.FC = () => {
   const [message, setMessage] = useState<string>('WASDで移動。上を目指せ。');
   const [showAdvanceDialog, setShowAdvanceDialog] = useState(false);
 
+  const isGameOver = state.hp.length === 0;
+
+  const restartGame = useCallback(() => {
+    setState({
+      hp: '心心心心心',
+      inventory: [],
+      currentMapIndex: 0,
+      playerPos: { x: 16, y: 16 },
+      flags: {},
+      discoveredChars: []
+    });
+    setShowAdvanceDialog(false);
+    setMessage('再スタート！WASDで移動。');
+  }, []);
+
   // セーブ処理
   useEffect(() => {
     localStorage.setItem(SAVE_KEY, JSON.stringify(state));
@@ -38,6 +53,12 @@ export const TextGame: React.FC = () => {
       if (nextX < 0 || nextX >= MAP_WIDTH || nextY < 0 || nextY >= MAP_HEIGHT) return prev;
       const targetTile = currentMap[nextY][nextX];
       if (targetTile.isWall) return prev;
+
+      // 必要なフラグが揃っていない場合は進めない
+      if (targetTile.requiresFlag && !prev.flags[targetTile.requiresFlag]) {
+        setMessage('まだ進めない。まずは他の手がかりを探そう。');
+        return prev;
+      }
 
       let nextHp = prev.hp; // HPの変化：要修正
       const nextInventory = [...prev.inventory];
@@ -69,8 +90,8 @@ export const TextGame: React.FC = () => {
         setShowAdvanceDialog(true); // ダイアログ表示
         return { ...prev, playerPos: { x: nextX, y: nextY } };
       }
-      if (!targetTile.event && (shinMeaning || jinMeaning)) {
-        setMessage(`${targetTile.char} の意味: ${shinMeaning || jinMeaning}`);
+      if (!targetTile.event && (shinMeaning || ginMeaning)) {
+        setMessage(`${targetTile.char} の意味: ${shinMeaning || ginMeaning}`);
       }
 
       return {
@@ -86,11 +107,10 @@ export const TextGame: React.FC = () => {
 
   // 入力判定
   useEffect(() => {
-    if (showAdvanceDialog) return; // ダイアログ中は動けない
+    if (showAdvanceDialog || isGameOver) return; // ダイアログ中・ゲームオーバー中は動けない
     const handleKey = (e: KeyboardEvent) => {
       switch (e.key.toLowerCase()) {
         case 'w': movePlayer(0, -1); break;
-        
         case 'a': movePlayer(-1, 0); break;
         case 's': movePlayer(0, 1); break;
         case 'd': movePlayer(1, 0); break;
@@ -98,7 +118,18 @@ export const TextGame: React.FC = () => {
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
-  }, [movePlayer, showAdvanceDialog]);
+  }, [movePlayer, showAdvanceDialog, isGameOver]);
+
+  useEffect(() => {
+    if (!isGameOver) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'y') {
+        restartGame();
+      }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [isGameOver, restartGame]);
 
   // 次のマップへ（ランダム選択）
   const advanceToNextMap = () => {
@@ -151,7 +182,7 @@ export const TextGame: React.FC = () => {
                 width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '14px',
                 color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff',
-                opacity: isDiscovered && tile.event ? 1 : 0.7
+                opacity: isDiscovered ? 1 : 0.7
               }}>
                 {x === state.playerPos.x && y === state.playerPos.y ? '人' : displayChar} 
               </div>
@@ -164,6 +195,55 @@ export const TextGame: React.FC = () => {
       <div style={{ marginTop: 20, width: 640, color: '#aaa', fontSize: '14px' }}>
         {message}
       </div>
+
+      {/* ゲームオーバー画面 */}
+      {isGameOver && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10
+        }}>
+              <div style={{
+            width: 680,
+            padding: 24,
+            backgroundColor: '#111',
+            border: '2px solid #f00',
+            borderRadius: 12,
+            color: '#fff',
+            textAlign: 'center',
+            boxShadow: '0 0 40px rgba(255,0,0,0.4)'
+          }}>
+            <img
+              src="image.png"
+              alt="Game Over"
+              style={{
+                width: '100%',
+                maxWidth: 640,
+                marginBottom: 24,
+                borderRadius: 10,
+                display: 'block',
+                objectFit: 'cover'
+              }}
+            />
+            <div style={{ fontSize: 28, color: '#f33', fontWeight: 'bold', marginBottom: 12 }}>GAME OVER</div>
+            <div style={{ fontSize: 16, color: '#ddd', marginBottom: 20 }}>YOU HAVE FALLEN IN BATTLE</div>
+            <div style={{ fontSize: 14, color: '#aaa', marginBottom: 20 }}>Retry from last checkpoint? (Press Y)</div>
+            <button
+              onClick={restartGame}
+              style={{
+                background: '#f00',
+                color: '#fff',
+                border: 'none',
+                padding: '12px 28px',
+                fontSize: 16,
+                borderRadius: 6,
+                cursor: 'pointer'
+              }}
+            >
+              RESTART (Y)
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 進むかの選択ダイアログ */}
       {showAdvanceDialog && (
