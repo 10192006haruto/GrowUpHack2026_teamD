@@ -90,6 +90,7 @@ export const TextGame: React.FC = () => {
     const handleKey = (e: KeyboardEvent) => {
       switch (e.key.toLowerCase()) {
         case 'w': movePlayer(0, -1); break;
+        
         case 'a': movePlayer(-1, 0); break;
         case 's': movePlayer(0, 1); break;
         case 'd': movePlayer(1, 0); break;
