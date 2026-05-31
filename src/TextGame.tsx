@@ -145,14 +145,30 @@ export const TextGame: React.FC = () => {
             const isDictionaryTile = !!(SHIN_DICTIONARY[tile.char] || GIN_DICTIONARY[tile.char]);
             const displayChar = isDiscovered || !isDictionaryTile ? tile.char : '？';
             
+             // --- ★ここから追加：if文によるプレイヤー「人」の色決定ロジック ---
+            const isPlayer = x === state.playerPos.x && y === state.playerPos.y;
+            let finalColor = '#fff'; // 通常の文字は白
+
+            if (isPlayer) {
+              if (state.hp.length <= 2) {
+                // 条件1：プレイヤーの位置であり、かつ「心」の文字列の要素数が2以下の場合は「赤」
+                finalColor = '#f00';
+              } else {
+                // 条件2：プレイヤーの位置であり、それ以外の安全な状態なら「緑」
+                finalColor = '#0f0';
+              }
+            }
+            // --- ★ここまで追加 ---
+
             return (
               <div key={`${x}-${y}`} style={{ 
                 width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '14px',
-                color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff',
+                // ★修正点：上で決定した if文のカラー（finalColor）をそのまま適用
+                color: finalColor,
                 opacity: isDiscovered && tile.event ? 1 : 0.7
               }}>
-                {x === state.playerPos.x && y === state.playerPos.y ? '人' : displayChar} 
+                {isPlayer ? '人' : displayChar} 
               </div>
             );
           })
