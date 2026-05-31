@@ -54,36 +54,35 @@ export const TextGame: React.FC = () => {
       const targetTile = currentMap[nextY][nextX];
       if (targetTile.isWall) return prev;
 
-      // 必要なフラグが揃っていない場合は進めない
-      if (targetTile.requiresFlag && !prev.flags[targetTile.requiresFlag]) {
-        setMessage('まだ進めない。まずは他の手がかりを探そう。');
-        return prev;
-      }
-
-      let nextHp = prev.hp; // HPの変化：要修正
+      let nextHp = prev.hp; // HPの変化
       const nextInventory = [...prev.inventory];
       const nextFlags = { ...prev.flags };
       const nextDiscoveredChars = [...prev.discoveredChars];
+      let nextMessage = '';
 
-      // 当たり判定時に文字を発見状態にする
-      if (targetTile.char && !nextDiscoveredChars.includes(targetTile.char)) {
+      // 当たり判定時に文字を発見状態にする（新規発見の判定）
+      const isNewlyDiscovered = targetTile.char && !nextDiscoveredChars.includes(targetTile.char);
+      if (isNewlyDiscovered) {
         nextDiscoveredChars.push(targetTile.char);
       }
 
-      // イベント発火
+      // イベント発火（新規発見時のみHP増減）
       const shinMeaning = SHIN_DICTIONARY[targetTile.char];
       const ginMeaning = GIN_DICTIONARY[targetTile.char];
       if (targetTile.event === 'shin') {
-        setMessage(`シンに触れた: ${shinMeaning || '???'}`);
+        nextMessage = `シンに触れた: ${shinMeaning || '???'}`;
         nextFlags.hasDiscoveredShin = true; // シンを発見したフラグをセット
       } else if (targetTile.event === 'gin') {
-        setMessage(`ジンに触れた: ${ginMeaning || '???'}`);
+        nextMessage = `ジンに触れた: ${ginMeaning || '???'}`;
         nextFlags.hasDiscoveredJin = true; // ジンを発見したフラグをセット
-        nextHp = nextHp.substring(0, nextHp.length - 1);
+        // 新規発見時のみHP減少
+        if (isNewlyDiscovered) {
+          nextHp = nextHp.substring(0, nextHp.length - 1);
+        }
       } else if (targetTile.event === 'item') {
         if (targetTile.label && !nextInventory.includes(targetTile.label)) {
           nextInventory.push(targetTile.label!);
-          setMessage(`${targetTile.label} を手に入れた。`);
+          nextMessage = `${targetTile.label} を手に入れた。`;
           nextHp += "心";
         }
       } else if (targetTile.event === 'advance') {
@@ -91,8 +90,20 @@ export const TextGame: React.FC = () => {
         return { ...prev, playerPos: { x: nextX, y: nextY } };
       }
       if (!targetTile.event && (shinMeaning || ginMeaning)) {
-        setMessage(`${targetTile.char} の意味: ${shinMeaning || ginMeaning}`);
+        nextMessage = `${targetTile.char} の意味: ${shinMeaning || ginMeaning}`;
       }
+
+      // SHIN_DICTIONARY にある文字に触れた際、50%で心が増える（新規発見時のみ）
+      if (isNewlyDiscovered && SHIN_DICTIONARY[targetTile.char]) {
+        if (Math.random() < 0.5) {
+          nextHp += '心';
+          nextMessage = nextMessage ? `${nextMessage}\n心が増えた！` : '心が増えた！';
+        } else {
+          // なにもしないが、必要ならメッセージを追加できる
+        }
+      }
+
+      if (nextMessage) setMessage(nextMessage);
 
       return {
         ...prev,
@@ -177,14 +188,29 @@ export const TextGame: React.FC = () => {
             const isDictionaryTile = !!(SHIN_DICTIONARY[tile.char] || GIN_DICTIONARY[tile.char]);
             const displayChar = isDiscovered || !isDictionaryTile ? tile.char : '？';
             
+             // --- ★ここから追加：if文によるプレイヤー「人」の色決定ロジック ---
+            const isPlayer = x === state.playerPos.x && y === state.playerPos.y;
+            let finalColor = '#fff'; // 通常の文字は白
+
+            if (isPlayer) {
+              if (state.hp.length <= 2) {
+                // 条件1：プレイヤーの位置であり、かつ「心」の文字列の要素数が2以下の場合は「赤」
+                finalColor = '#f00';
+              } else {
+                // 条件2：プレイヤーの位置であり、それ以外の安全な状態なら「緑」
+                finalColor = '#0f0';
+              }
+            }
+            // --- ★ここまで追加 ---
             return (
               <div key={`${x}-${y}`} style={{ 
                 width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: '14px',
-                color: x === state.playerPos.x && y === state.playerPos.y ? '#0f0' : '#fff',
-                opacity: isDiscovered ? 1 : 0.7
+                // ★修正点：上で決定した if文のカラー（finalColor）をそのまま適用
+                color: finalColor,
+                opacity: isDiscovered && tile.event ? 1 : 0.7
               }}>
-                {x === state.playerPos.x && y === state.playerPos.y ? '人' : displayChar} 
+                {isPlayer ? '人' : displayChar} 
               </div>
             );
           })
@@ -192,7 +218,7 @@ export const TextGame: React.FC = () => {
       </div>
 
       {/* 下部のメッセージエリア */}
-      <div style={{ marginTop: 20, width: 640, color: '#aaa', fontSize: '14px' }}>
+      <div style={{ marginTop: 20, width: 640, color: '#aaa', fontSize: '14px', whiteSpace: 'pre-wrap' }}>
         {message}
       </div>
 
