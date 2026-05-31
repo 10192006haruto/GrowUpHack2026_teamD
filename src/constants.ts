@@ -89,11 +89,13 @@ export const GIN_DICTIONARY: Record<string, string> = {
   '搢': '（※シンにあるため、代わりに『絚』じん：張りつめた綱、強く引き締まるさま'
 };
 
+type Position = { x: number; y: number };
+
 // マップの生成関数（簡易版：実際はもっと複雑に配置可能）
-const createEmptyMap = (): TileData[][] => 
-  Array(MAP_HEIGHT).fill(null).map(() => 
-    Array(MAP_WIDTH).fill(null).map(() => ({ char: '', isWall: false }))
-  );
+const createEmptyMap = (): TileData[][] =>
+  Array(MAP_HEIGHT)
+    .fill(null)
+    .map(() => Array(MAP_WIDTH).fill(null).map(() => ({ char: '', isWall: false })));
 
 const shuffle = <T,>(items: T[]): T[] => {
   const result = [...items];
@@ -102,6 +104,30 @@ const shuffle = <T,>(items: T[]): T[] => {
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
+};
+
+const getEmptyPositions = (map: TileData[][]): Position[] => {
+  const positions: Position[] = [];
+  for (let y = 1; y < MAP_HEIGHT - 1; y++) {
+    for (let x = 1; x < MAP_WIDTH - 1; x++) {
+      if (map[y][x].char === '' && !map[y][x].isWall) {
+        positions.push({ x, y });
+      }
+    }
+  }
+  return positions;
+};
+
+const getSpacedPositions = (map: TileData[][]): Position[] => {
+  const positions: Position[] = [];
+  for (let y = 1; y < MAP_HEIGHT - 1; y += 1) {
+    for (let x = 1; x < MAP_WIDTH - 1; x += 1) {
+      if (map[y][x].char === '' && !map[y][x].isWall) {
+        positions.push({ x, y });
+      }
+    }
+  }
+  return positions;
 };
 
 const EXTRA_KANJI = Array.from(
@@ -126,31 +152,33 @@ export const MAPS: TileData[][][] = [0, 1, 2, 3, 4].map(() => {
   /**
    * 座標の直接埋め込みの部分(進、真、芯などの重要なイベントを起こすもの)  
    */ 
-  map[5][10] = { char: '真', isWall: false, event: 'shin', label: '真実の断片' };
+  const availablePositions = shuffle(getEmptyPositions(map));
+  const takeRandomPosition = (): Position | null => {
+    while (availablePositions.length > 0) {
+      const pos = availablePositions.pop()!;
+      if (map[pos.y][pos.x].char === '' && !map[pos.y][pos.x].isWall) {
+        return pos;
+      }
+    }
+    return null;
+  };
+
+  const placeSpecialTile = (tile: TileData) => {
+    const pos = takeRandomPosition();
+    if (!pos) return;
+    map[pos.y][pos.x] = tile;
+  };
+
+  // 要件：シンとの当たり判定イベント
+  placeSpecialTile({ char: '真', isWall: false, event: 'shin', label: '真実の断片' });
   // 要件：進（進むかの選択）- 真を発見後に現れる
-  map[2][16] = { char: '進', isWall: false, event: 'advance', requiresFlag: 'hasDiscoveredShin' };
+  placeSpecialTile({ char: '進', isWall: false, event: 'advance', requiresFlag: 'hasDiscoveredShin' });
   // アイテム
-  map[10][5] = { char: '薬', isWall: false, event: 'item', label: '心の欠片' };
-  map[12][8] = { char: '芯', isWall: false, event: 'item', label: '心の拠り所'};
+  placeSpecialTile({ char: '薬', isWall: false, event: 'item', label: '心の欠片' });
+  placeSpecialTile({ char: '芯', isWall: false, event: 'item', label: '心の拠り所' });
 
-  const spacedPositions: { x: number; y: number }[] = [];
-  for (let y = 2; y < MAP_HEIGHT - 2; y += 2) {
-    for (let x = 2; x < MAP_WIDTH - 2; x += 2) {
-      if (map[y][x].char === '' && !map[y][x].isWall) {
-        spacedPositions.push({ x, y });
-      }
-    }
-  }
-
-  const allEmptyPositions: { x: number; y: number }[] = [];
-  for (let y = 1; y < MAP_HEIGHT - 1; y++) {
-    for (let x = 1; x < MAP_WIDTH - 1; x++) {
-      if (map[y][x].char === '' && !map[y][x].isWall) {
-        allEmptyPositions.push({ x, y });
-      }
-    }
-  }
-
+  const spacedPositions = getSpacedPositions(map);
+  const allEmptyPositions = getEmptyPositions(map);
   const placementPositions = shuffle(spacedPositions);
   if (placementPositions.length < EXTRA_KANJI.length) {
     const fallbackPositions = allEmptyPositions.filter(
@@ -166,6 +194,5 @@ export const MAPS: TileData[][][] = [0, 1, 2, 3, 4].map(() => {
       SHIN_DICTIONARY[char] ? 'shin' : GIN_DICTIONARY[char] ? 'gin' : undefined;
     map[pos.y][pos.x] = event ? { char, isWall: false, event } : { char, isWall: false };
   });
-  
   return map;
 });

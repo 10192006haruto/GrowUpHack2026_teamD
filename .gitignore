@@ -28,4 +28,4 @@ tsconfig.json
 *.njsproj
 *.sln
 *.sw?
-./GrowUpHack2026_teamD/*
+.DS_Store

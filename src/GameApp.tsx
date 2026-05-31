@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { usePlayerMovement } from './userPlayerMovements';
 import { Target, setTargetContext } from './Target';
 import { type Position, type GameAppState } from './types';
@@ -8,13 +8,13 @@ import { type Position, type GameAppState } from './types';
 const SHIN_POS: Position = { x: 300, y: 200 };
 const ADVANCE_ITEM_POS: Position = { x: 500, y: 400 };
 
-export const GameApp: React.FC = () => {
+export function GameApp() {
   const [gameState, setGameState] = useState<GameAppState>({
-    hp: "心心心心心", // プレイヤーのHP：変更必須
+    hp: "心心心心心", // プレイヤーのHP
     inventory: [],
     canAdvance: false,
     isShinEventTriggered: false,
-    discoveredChars: [],
+    discoveredChars: []
   });
 
   const handleMove = (nextPos: Position) => {
@@ -70,4 +70,4 @@ export const GameApp: React.FC = () => {
       )}
     </div>
   );
-};
+}
