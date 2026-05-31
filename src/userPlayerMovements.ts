@@ -12,11 +12,23 @@ export const usePlayerMovement = (
     const handleKeyDown = (e: KeyboardEvent) => {
       setPosition((prev) => {
         const newPos = { ...prev };
-        switch (e.key.toLowerCase()) {
-          case 'w': newPos.y -= MOVE_SPEED; break;
-          case 'a': newPos.x -= MOVE_SPEED; break;
-          case 's': newPos.y += MOVE_SPEED; break;
-          case 'd': newPos.x += MOVE_SPEED; break;
+        switch (e.key) {
+          case 'w':
+          case 'ArrowUp': // 効かない
+            newPos.y -= MOVE_SPEED;
+            break;
+          case 's':
+          case 'ArrowDown': // 効かない
+            newPos.y += MOVE_SPEED;
+            break;
+          case 'a':
+          case 'ArrowLeft': // 効かない
+            newPos.x -= MOVE_SPEED;
+            break;
+          case 'd':
+          case 'ArrowRight': // 効かない
+            newPos.x += MOVE_SPEED;
+            break;
           default: return prev;
         }
         onMove?.(newPos);

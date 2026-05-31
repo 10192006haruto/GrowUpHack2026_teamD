@@ -51,12 +51,12 @@ export const TextGame: React.FC = () => {
 
       // イベント発火
       const shinMeaning = SHIN_DICTIONARY[targetTile.char];
-      const jinMeaning = GIN_DICTIONARY[targetTile.char];
+      const ginMeaning = GIN_DICTIONARY[targetTile.char];
       if (targetTile.event === 'shin') {
         setMessage(`シンに触れた: ${shinMeaning || '???'}`);
         nextFlags.hasDiscoveredShin = true; // シンを発見したフラグをセット
       } else if (targetTile.event === 'gin') {
-        setMessage(`ジンに触れた: ${jinMeaning || '???'}`);
+        setMessage(`ジンに触れた: ${ginMeaning || '???'}`);
         nextFlags.hasDiscoveredJin = true; // ジンを発見したフラグをセット
         nextHp = nextHp.substring(0, nextHp.length - 1);
       } else if (targetTile.event === 'item') {

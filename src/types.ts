@@ -25,7 +25,7 @@ export interface GameAppState {
   discoveredChars: string[];
 }
 
-export const MAP_WIDTH = 32; // 16:9の比率を考慮
+export const MAP_WIDTH = 32; 
 export const MAP_HEIGHT = 18;
-export const MOVE_SPEED = 50;
+export const MOVE_SPEED = 50; // プレイヤーの移動量
 export const HIT_RANGE = 40;
