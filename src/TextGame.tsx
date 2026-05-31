@@ -58,7 +58,7 @@ export const TextGame: React.FC = () => {
         nextMessage = `シンに触れた: ${shinMeaning || '???'}`;
         nextFlags.hasDiscoveredShin = true; // シンを発見したフラグをセット
       } else if (targetTile.event === 'gin') {
-        nextMessage = `ジンに触れた: ${jinMeaning || '???'}`;
+        nextMessage = `ジンに触れた: ${ginMeaning || '???'}`;
         nextFlags.hasDiscoveredJin = true; // ジンを発見したフラグをセット
         // 新規発見時のみHP減少
         if (isNewlyDiscovered) {
@@ -74,8 +74,8 @@ export const TextGame: React.FC = () => {
         setShowAdvanceDialog(true); // ダイアログ表示
         return { ...prev, playerPos: { x: nextX, y: nextY } };
       }
-      if (!targetTile.event && (shinMeaning || jinMeaning)) {
-        nextMessage = `${targetTile.char} の意味: ${shinMeaning || jinMeaning}`;
+      if (!targetTile.event && (shinMeaning || ginMeaning)) {
+        nextMessage = `${targetTile.char} の意味: ${shinMeaning || ginMeaning}`;
       }
 
       // SHIN_DICTIONARY にある文字に触れた際、50%で心が増える（新規発見時のみ）
