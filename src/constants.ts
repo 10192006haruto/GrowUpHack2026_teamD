@@ -135,7 +135,7 @@ const EXTRA_KANJI = Array.from(
     ...Object.keys(SHIN_DICTIONARY),
     ...Object.keys(GIN_DICTIONARY)
   ])
-).filter((char) => !['真', '進', '薬', '芯'].includes(char));
+).filter((char) => !['真', '進', '芯'].includes(char));
 
 // 0, 1, 2, 3, 4のマップ生成(現状は1つだけ)
 export const MAPS: TileData[][][] = [0, 1, 2, 3, 4].map(() => {
@@ -174,7 +174,6 @@ export const MAPS: TileData[][][] = [0, 1, 2, 3, 4].map(() => {
   // 要件：進（進むかの選択）- 真を発見後に現れる
   placeSpecialTile({ char: '進', isWall: false, event: 'advance', requiresFlag: 'hasDiscoveredShin' });
   // アイテム
-  placeSpecialTile({ char: '薬', isWall: false, event: 'item', label: '心の欠片' });
   placeSpecialTile({ char: '芯', isWall: false, event: 'item', label: '心の拠り所' });
 
   const spacedPositions = getSpacedPositions(map);
